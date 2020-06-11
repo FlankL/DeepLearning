@@ -3,6 +3,7 @@
 #  @Author:Flank
 import tensorflow as tf
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def add_layer(inputs, inSize, outSize, activation_function=None):
@@ -25,8 +26,41 @@ def add_layer(inputs, inSize, outSize, activation_function=None):
     return outputs
 
 if __name__=='__main__':
-    xData=np.linspace(-1,1,10).reshape(10,1)
-    noise=np.random.normal(0,0.05,)#0表示中心点，0.05表示方差
+    xData=np.linspace(-1,1,300).reshape(300,1)
+    noise=np.random.normal(0,0.05,xData.shape)#0表示中心点，0.05表示方差,
     yData=np.square(xData)-0.5+noise# 加一些噪声点，让他不是完全的抛物线来模拟真实情况
-    print(xData)
+
+    xs=tf.placeholder(tf.float32,[None,1])
+    ys=tf.placeholder(tf.float32,[None,1])
+
+    #输入层一个神经元，隐藏层10个，输出层一个神经元的神经网络模型
+    l1=add_layer(xs,1,10,activation_function=tf.nn.relu)#隐藏层
+    prediction=add_layer(l1,10,1,activation_function=None)#输出层
+
+    loss=tf.reduce_mean(tf.reduce_sum(tf.square(ys-prediction),reduction_indices=[1]))
+    optimizer=tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+
+    init =tf.initialize_all_variables()
+    session=tf.Session()
+    session.run(init)
+
+    #结果可视化
+    fig=plt.figure()
+    ax=fig.add_subplot(1,1,1)
+    ax.scatter(xData,yData)
+    plt.ion()#因为plt.show之后程序会停住，这句话的作用就是，让主程序继续往下走
+    plt.show()
+
+    #开始训练
+    for i in range(1000):
+        session.run(optimizer,feed_dict={xs:xData,ys:yData})
+        if i % 50 ==0:
+            try:#第一次的时候没有线，防止报错
+               ax.lines.remove(lines[0])  # 每次生成完一条线后就要，删除掉，不然会有很多条线叠在一起
+            except Exception as e:
+                print(e)
+            # print(session.run(loss,feed_dict={xs:xData,ys:yData}))#只要是跟placholer所定义的参数参与的计算，都要用feed_dict传入参数
+            predictionValue=session.run(prediction,feed_dict={xs:xData})
+            lines=ax.plot(xData,predictionValue,'r-',lw=5) #画线，r-表示红色虚线
+            plt.pause(0.2)#停上0.1秒
 
